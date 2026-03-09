@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOMECARE – Digital Twins Water Management</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">💧</span>
+        <span class="logo-text">HOMECARE</span>
+      </div>
+      <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle sidebar">&#9776;</button>
+    </div>
+    <ul class="nav-links">
+      <li class="nav-item active" data-page="dashboard">
+        <span class="nav-icon">🏠</span><span class="nav-label">Dashboard</span>
+      </li>
+      <li class="nav-item" data-page="digital-twin">
+        <span class="nav-icon">🌐</span><span class="nav-label">Digital Twin</span>
+      </li>
+      <li class="nav-item" data-page="avatar">
+        <span class="nav-icon">👤</span><span class="nav-label">Home Avatar</span>
+      </li>
+      <li class="nav-item" data-page="analytics">
+        <span class="nav-icon">📊</span><span class="nav-label">Analytics</span>
+      </li>
+      <li class="nav-item" data-page="alerts">
+        <span class="nav-icon">🔔</span><span class="nav-label">Alerts <span class="badge" id="alertBadge">3</span></span>
+      </li>
+      <li class="nav-item" data-page="settings">
+        <span class="nav-icon">⚙️</span><span class="nav-label">Settings</span>
+      </li>
+    </ul>
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar">JB</div>
+        <div class="user-details">
+          <div class="user-name">Jamie B.</div>
+          <div class="user-role">Homeowner</div>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content" id="mainContent">
+    <!-- Top Bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 class="page-title" id="pageTitle">Dashboard</h1>
+        <span class="page-subtitle" id="pageSubtitle">Real-time water management overview</span>
+      </div>
+      <div class="topbar-right">
+        <div class="status-indicator" id="statusIndicator">
+          <span class="status-dot online"></span>
+          <span class="status-text">All Systems Operational</span>
+        </div>
+        <div class="time-display" id="timeDisplay"></div>
+      </div>
+    </header>
+
+    <!-- Pages -->
+    <div class="page-content">
+
+      <!-- ===== DASHBOARD PAGE ===== -->
+      <section class="page active" id="page-dashboard">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon water">💧</div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpiTodayUsage">127 L</div>
+              <div class="kpi-label">Today's Usage</div>
+              <div class="kpi-change positive">↓ 8% vs yesterday</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon pressure">📈</div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpiPressure">3.2 bar</div>
+              <div class="kpi-label">Water Pressure</div>
+              <div class="kpi-change neutral">Normal range</div>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon temp">🌡️</div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpiTemp">52°C</div>
+              <div class="kpi-label">Hot Water Temp</div>
+              <div class="kpi-change neutral">Within limits</div>
+            </div>
+          </div>
+          <div class="kpi-card alert">
+            <div class="kpi-icon leak">⚠️</div>
+            <div class="kpi-data">
+              <div class="kpi-value" id="kpiLeaks">3</div>
+              <div class="kpi-label">Active Alerts</div>
+              <div class="kpi-change negative">Requires attention</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Real-time usage chart -->
+          <div class="card chart-card wide">
+            <div class="card-header">
+              <h2>Real-Time Water Flow</h2>
+              <div class="card-actions">
+                <button class="btn-chip active" onclick="setChartPeriod(this,'live')">Live</button>
+                <button class="btn-chip" onclick="setChartPeriod(this,'hour')">1h</button>
+                <button class="btn-chip" onclick="setChartPeriod(this,'day')">24h</button>
+              </div>
+            </div>
+            <canvas id="flowChart" height="120"></canvas>
+          </div>
+
+          <!-- Room consumption breakdown -->
+          <div class="card chart-card">
+            <div class="card-header"><h2>Usage by Room</h2></div>
+            <canvas id="roomChart" height="200"></canvas>
+          </div>
+
+          <!-- Sensor status grid -->
+          <div class="card">
+            <div class="card-header"><h2>Sensor Network</h2></div>
+            <div class="sensor-grid" id="sensorGrid"></div>
+          </div>
+        </div>
+
+        <!-- Quick controls -->
+        <div class="card controls-card">
+          <div class="card-header"><h2>Quick Controls</h2></div>
+          <div class="controls-grid">
+            <div class="control-item">
+              <label class="control-label">Main Supply Valve</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="mainValve" checked onchange="toggleValve('main', this)" />
+                <span class="slider"></span>
+              </label>
+              <span class="control-status" id="mainValveStatus">Open</span>
+            </div>
+            <div class="control-item">
+              <label class="control-label">Garden Irrigation</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="gardenValve" onchange="toggleValve('garden', this)" />
+                <span class="slider"></span>
+              </label>
+              <span class="control-status" id="gardenValveStatus">Closed</span>
+            </div>
+            <div class="control-item">
+              <label class="control-label">Hot Water Boiler</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="boilerSwitch" checked onchange="toggleValve('boiler', this)" />
+                <span class="slider"></span>
+              </label>
+              <span class="control-status" id="boilerSwitchStatus">Active</span>
+            </div>
+            <div class="control-item">
+              <label class="control-label">Leak Detection</label>
+              <label class="toggle-switch">
+                <input type="checkbox" id="leakDetect" checked onchange="toggleValve('leak', this)" />
+                <span class="slider"></span>
+              </label>
+              <span class="control-status" id="leakDetectStatus">Monitoring</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== DIGITAL TWIN PAGE ===== -->
+      <section class="page" id="page-digital-twin">
+        <div class="twin-layout">
+          <div class="card twin-house-card">
+            <div class="card-header">
+              <h2>Home Digital Twin</h2>
+              <div class="card-actions">
+                <button class="btn-chip active" onclick="setTwinView(this,'floor')">Floor Plan</button>
+                <button class="btn-chip" onclick="setTwinView(this,'3d')">3D View</button>
+              </div>
+            </div>
+            <div class="twin-container" id="twinContainer">
+              <div class="house-svg-wrapper">
+                <!-- SVG Floor Plan -->
+                <svg viewBox="0 0 700 500" class="house-plan" id="housePlan">
+                  <!-- House outline -->
+                  <rect x="50" y="50" width="600" height="400" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="3"/>
+                  <!-- Roof line decoration -->
+                  <polygon points="350,10 650,50 50,50" fill="#e2e8f0" stroke="#cbd5e1" stroke-width="2"/>
+
+                  <!-- Kitchen -->
+                  <rect x="60" y="60" width="180" height="140" rx="4" class="room kitchen" data-room="kitchen"/>
+                  <text x="150" y="130" class="room-label">Kitchen</text>
+                  <circle cx="120" cy="100" r="8" class="sensor-dot sensor-ok" title="Flow Sensor K1"/>
+                  <circle cx="190" cy="150" r="8" class="sensor-dot sensor-warning" title="Pressure K2"/>
+
+                  <!-- Living Room -->
+                  <rect x="250" y="60" width="200" height="180" rx="4" class="room living" data-room="living"/>
+                  <text x="350" y="155" class="room-label">Living Room</text>
+
+                  <!-- Master Bedroom -->
+                  <rect x="460" y="60" width="180" height="140" rx="4" class="room bedroom" data-room="master-bed"/>
+                  <text x="550" y="130" class="room-label">Master Bed</text>
+
+                  <!-- Bathroom 1 -->
+                  <rect x="60" y="210" width="120" height="120" rx="4" class="room bathroom" data-room="bath1"/>
+                  <text x="120" y="275" class="room-label">Bath 1</text>
+                  <circle cx="95" cy="240" r="8" class="sensor-dot sensor-ok" title="Flow B1"/>
+                  <circle cx="150" cy="290" r="8" class="sensor-dot sensor-ok" title="Drain B1"/>
+
+                  <!-- Utility Room -->
+                  <rect x="190" y="250" width="130" height="120" rx="4" class="room utility" data-room="utility"/>
+                  <text x="255" y="315" class="room-label">Utility</text>
+                  <circle cx="230" cy="280" r="8" class="sensor-dot sensor-ok" title="Boiler Sensor"/>
+
+                  <!-- Bedroom 2 -->
+                  <rect x="330" y="250" width="150" height="120" rx="4" class="room bedroom" data-room="bed2"/>
+                  <text x="405" y="315" class="room-label">Bedroom 2</text>
+
+                  <!-- Bathroom 2 -->
+                  <rect x="490" y="210" width="140" height="100" rx="4" class="room bathroom" data-room="bath2"/>
+                  <text x="560" y="265" class="room-label">Bath 2</text>
+                  <circle cx="520" cy="235" r="8" class="sensor-dot sensor-alert" title="Leak Detected!"/>
+                  <circle cx="590" cy="270" r="8" class="sensor-dot sensor-ok" title="Flow B2"/>
+
+                  <!-- Garage -->
+                  <rect x="60" y="340" width="600" height="100" rx="4" class="room garage" data-room="garage"/>
+                  <text x="360" y="395" class="room-label">Garage / Garden Zone</text>
+                  <circle cx="200" cy="370" r="8" class="sensor-dot sensor-ok" title="Garden Valve"/>
+                  <circle cx="500" cy="370" r="8" class="sensor-dot sensor-ok" title="Rain Sensor"/>
+
+                  <!-- Pipe network overlay -->
+                  <g class="pipe-network" opacity="0.5">
+                    <line x1="150" y1="200" x2="150" y2="450" stroke="#3b82f6" stroke-width="3" stroke-dasharray="6,3"/>
+                    <line x1="150" y1="330" x2="560" y2="330" stroke="#3b82f6" stroke-width="3" stroke-dasharray="6,3"/>
+                    <line x1="350" y1="330" x2="350" y2="250" stroke="#3b82f6" stroke-width="3" stroke-dasharray="6,3"/>
+                    <line x1="560" y1="60" x2="560" y2="330" stroke="#3b82f6" stroke-width="3" stroke-dasharray="6,3"/>
+                  </g>
+
+                  <!-- Water flow animation dots -->
+                  <circle r="5" fill="#3b82f6" opacity="0.8">
+                    <animateMotion dur="3s" repeatCount="indefinite">
+                      <mpath href="#pipeH"/>
+                    </animateMotion>
+                  </circle>
+                  <path id="pipeH" d="M150,330 L560,330" fill="none"/>
+                </svg>
+
+                <!-- Room tooltip -->
+                <div class="room-tooltip" id="roomTooltip"></div>
+              </div>
+            </div>
+            <!-- Legend -->
+            <div class="twin-legend">
+              <span class="legend-item"><span class="legend-dot sensor-ok"></span> Normal</span>
+              <span class="legend-item"><span class="legend-dot sensor-warning"></span> Warning</span>
+              <span class="legend-item"><span class="legend-dot sensor-alert"></span> Alert</span>
+              <span class="legend-item"><span class="legend-pipe"></span> Pipe Network</span>
+            </div>
+          </div>
+
+          <!-- Twin side panel -->
+          <div class="twin-side-panel">
+            <div class="card">
+              <div class="card-header"><h2>System Status</h2></div>
+              <div class="system-status-list" id="systemStatusList"></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h2>Flow Simulation</h2></div>
+              <canvas id="twinFlowChart" height="160"></canvas>
+            </div>
+            <div class="card">
+              <div class="card-header"><h2>Twin Sync</h2></div>
+              <div class="sync-status">
+                <div class="sync-row">
+                  <span>Last sync</span>
+                  <span class="sync-time" id="lastSyncTime">Just now</span>
+                </div>
+                <div class="sync-row">
+                  <span>Sensor readings</span>
+                  <span class="sync-ok">12 active</span>
+                </div>
+                <div class="sync-row">
+                  <span>Model accuracy</span>
+                  <span class="sync-ok">98.4%</span>
+                </div>
+                <button class="btn-primary" onclick="syncTwin()">🔄 Sync Now</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== AVATAR PAGE ===== -->
+      <section class="page" id="page-avatar">
+        <div class="avatar-layout">
+          <div class="card avatar-main-card">
+            <div class="card-header">
+              <h2>Home Avatar</h2>
+              <div class="card-actions">
+                <button class="btn-chip active" id="avatarModeBtn" onclick="setAvatarMode(this,'status')">Status Mode</button>
+                <button class="btn-chip" onclick="setAvatarMode(this,'edit')">Edit Mode</button>
+              </div>
+            </div>
+            <div class="avatar-display" id="avatarDisplay">
+              <div class="avatar-house" id="avatarHouse">
+                <!-- Animated house avatar -->
+                <div class="house-body">
+                  <div class="house-roof">
+                    <div class="roof-shape"></div>
+                  </div>
+                  <div class="house-walls">
+                    <div class="house-face">
+                      <div class="avatar-eye left" id="eyeLeft">
+                        <div class="eye-pupil"></div>
+                      </div>
+                      <div class="avatar-eye right" id="eyeRight">
+                        <div class="eye-pupil"></div>
+                      </div>
+                      <div class="avatar-mouth" id="avatarMouth">😊</div>
+                    </div>
+                    <div class="house-door"></div>
+                    <div class="house-windows">
+                      <div class="house-window glow-blue" id="winKitchen" title="Kitchen">💧</div>
+                      <div class="house-window glow-yellow" id="winLiving" title="Living Room">🏡</div>
+                      <div class="house-window glow-red" id="winBath" title="Bathroom Alert">⚠️</div>
+                      <div class="house-window glow-green" id="winBed" title="Bedroom">✅</div>
+                    </div>
+                  </div>
+                  <div class="water-drops-container" id="waterDrops">
+                    <div class="water-drop drop1">💧</div>
+                    <div class="water-drop drop2">💧</div>
+                    <div class="water-drop drop3">💧</div>
+                  </div>
+                </div>
+
+                <!-- Avatar Status Bubble -->
+                <div class="avatar-speech" id="avatarSpeech">
+                  <p id="avatarMessage">All water systems running normally. Garden irrigation schedule active for 18:00.</p>
+                </div>
+              </div>
+
+              <!-- Avatar health meter -->
+              <div class="avatar-health">
+                <h3>Home Health Score</h3>
+                <div class="health-score">
+                  <svg viewBox="0 0 120 120" width="120" height="120" class="health-ring">
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="10"/>
+                    <circle cx="60" cy="60" r="50" fill="none" stroke="#22c55e" stroke-width="10"
+                      stroke-dasharray="251.2" stroke-dashoffset="37.7"
+                      stroke-linecap="round" transform="rotate(-90 60 60)"
+                      id="healthRing"/>
+                    <text x="60" y="65" text-anchor="middle" class="health-pct" id="healthPct">85%</text>
+                  </svg>
+                </div>
+                <div class="health-breakdown">
+                  <div class="health-item">
+                    <span>Water Efficiency</span>
+                    <div class="health-bar"><div class="health-fill" style="width:90%" data-color="green"></div></div>
+                    <span>90%</span>
+                  </div>
+                  <div class="health-item">
+                    <span>Pipe Integrity</span>
+                    <div class="health-bar"><div class="health-fill" style="width:78%" data-color="yellow"></div></div>
+                    <span>78%</span>
+                  </div>
+                  <div class="health-item">
+                    <span>Pressure Balance</span>
+                    <div class="health-bar"><div class="health-fill" style="width:95%" data-color="green"></div></div>
+                    <span>95%</span>
+                  </div>
+                  <div class="health-item">
+                    <span>Sensor Coverage</span>
+                    <div class="health-bar"><div class="health-fill" style="width:75%" data-color="yellow"></div></div>
+                    <span>75%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Avatar Personality & Preferences -->
+          <div class="avatar-side">
+            <div class="card">
+              <div class="card-header"><h2>Avatar Personality</h2></div>
+              <div class="personality-grid">
+                <div class="personality-item active" onclick="setPersonality(this,'eco')">
+                  <span class="p-icon">🌿</span>
+                  <span class="p-label">Eco Mode</span>
+                </div>
+                <div class="personality-item" onclick="setPersonality(this,'comfort')">
+                  <span class="p-icon">🛁</span>
+                  <span class="p-label">Comfort</span>
+                </div>
+                <div class="personality-item" onclick="setPersonality(this,'smart')">
+                  <span class="p-icon">🤖</span>
+                  <span class="p-label">Smart AI</span>
+                </div>
+                <div class="personality-item" onclick="setPersonality(this,'alert')">
+                  <span class="p-icon">🛡️</span>
+                  <span class="p-label">Guardian</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h2>Avatar Messages</h2></div>
+              <div class="avatar-messages" id="avatarMessages">
+                <div class="avatar-msg info">
+                  <span class="msg-icon">💬</span>
+                  <p>Water usage is 8% below your weekly average. Great job!</p>
+                  <span class="msg-time">2 min ago</span>
+                </div>
+                <div class="avatar-msg warning">
+                  <span class="msg-icon">⚠️</span>
+                  <p>Bathroom 2 shows unusual pressure drop. Checking sensors...</p>
+                  <span class="msg-time">15 min ago</span>
+                </div>
+                <div class="avatar-msg info">
+                  <span class="msg-icon">💡</span>
+                  <p>Optimal time to run washing machine: 22:00-06:00 (low-rate tariff).</p>
+                  <span class="msg-time">1 hr ago</span>
+                </div>
+                <div class="avatar-msg success">
+                  <span class="msg-icon">✅</span>
+                  <p>Garden irrigation completed. Used 18L (scheduled 20L).</p>
+                  <span class="msg-time">3 hr ago</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header"><h2>Schedule</h2></div>
+              <div class="schedule-list" id="scheduleList">
+                <div class="schedule-item">
+                  <span class="sched-time">06:30</span>
+                  <span class="sched-event">Morning hot water pre-heat</span>
+                  <span class="sched-status active">Active</span>
+                </div>
+                <div class="schedule-item">
+                  <span class="sched-time">18:00</span>
+                  <span class="sched-event">Garden irrigation cycle</span>
+                  <span class="sched-status pending">Pending</span>
+                </div>
+                <div class="schedule-item">
+                  <span class="sched-time">22:00</span>
+                  <span class="sched-event">Night low-flow mode</span>
+                  <span class="sched-status pending">Pending</span>
+                </div>
+                <div class="schedule-item">
+                  <span class="sched-time">07:00</span>
+                  <span class="sched-event">Daily system diagnostics</span>
+                  <span class="sched-status done">Done</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ANALYTICS PAGE ===== -->
+      <section class="page" id="page-analytics">
+        <div class="analytics-controls">
+          <div class="analytics-period">
+            <button class="btn-chip active" onclick="setAnalyticsPeriod(this,'week')">Week</button>
+            <button class="btn-chip" onclick="setAnalyticsPeriod(this,'month')">Month</button>
+            <button class="btn-chip" onclick="setAnalyticsPeriod(this,'year')">Year</button>
+          </div>
+          <div class="analytics-compare">
+            <label class="toggle-switch small">
+              <input type="checkbox" id="compareToggle" onchange="toggleCompare(this)" />
+              <span class="slider"></span>
+            </label>
+            <span>Compare to previous period</span>
+          </div>
+        </div>
+
+        <div class="analytics-grid">
+          <div class="card chart-card wide">
+            <div class="card-header"><h2>Water Consumption Trend</h2></div>
+            <canvas id="trendChart" height="100"></canvas>
+          </div>
+          <div class="card chart-card">
+            <div class="card-header"><h2>Monthly Comparison</h2></div>
+            <canvas id="monthlyChart" height="180"></canvas>
+          </div>
+          <div class="card chart-card">
+            <div class="card-header"><h2>Cost Analysis</h2></div>
+            <canvas id="costChart" height="180"></canvas>
+          </div>
+        </div>
+
+        <!-- Stats summary -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-value">3,842 L</div>
+            <div class="stat-label">Total This Week</div>
+            <div class="stat-trend down">↓ 5.2% vs last week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">£12.40</div>
+            <div class="stat-label">Estimated Cost</div>
+            <div class="stat-trend down">↓ £0.80 savings</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">549 L/day</div>
+            <div class="stat-label">Daily Average</div>
+            <div class="stat-trend neutral">= avg for family of 4</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">18 L</div>
+            <div class="stat-label">Recycled/Saved</div>
+            <div class="stat-trend up">↑ Rain harvesting</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== ALERTS PAGE ===== -->
+      <section class="page" id="page-alerts">
+        <div class="alerts-header">
+          <div class="alert-filters">
+            <button class="btn-chip active" onclick="filterAlerts(this,'all')">All (6)</button>
+            <button class="btn-chip" onclick="filterAlerts(this,'critical')">Critical (1)</button>
+            <button class="btn-chip" onclick="filterAlerts(this,'warning')">Warning (2)</button>
+            <button class="btn-chip" onclick="filterAlerts(this,'info')">Info (3)</button>
+          </div>
+          <button class="btn-primary" onclick="clearAllAlerts()">Clear Resolved</button>
+        </div>
+
+        <div class="alerts-list" id="alertsList">
+          <div class="alert-card critical" data-type="critical">
+            <div class="alert-icon">🚨</div>
+            <div class="alert-body">
+              <div class="alert-title">Leak Detected – Bathroom 2</div>
+              <div class="alert-desc">Anomalous pressure drop detected at sensor B2-P1. Possible pipe leak under sink. Immediate inspection recommended.</div>
+              <div class="alert-meta"><span class="alert-time">5 min ago</span><span class="alert-sensor">Sensor: B2-P1</span></div>
+            </div>
+            <div class="alert-actions">
+              <button class="btn-outline" onclick="resolveAlert(this)">Resolve</button>
+              <button class="btn-primary" onclick="showDetail('leak')">Details</button>
+            </div>
+          </div>
+
+          <div class="alert-card warning" data-type="warning">
+            <div class="alert-icon">⚠️</div>
+            <div class="alert-body">
+              <div class="alert-title">High Pressure – Kitchen Supply</div>
+              <div class="alert-desc">Inlet pressure reached 4.1 bar (normal: 2.5–4.0 bar). Consider pressure reducer adjustment.</div>
+              <div class="alert-meta"><span class="alert-time">23 min ago</span><span class="alert-sensor">Sensor: K-P2</span></div>
+            </div>
+            <div class="alert-actions">
+              <button class="btn-outline" onclick="resolveAlert(this)">Resolve</button>
+              <button class="btn-primary" onclick="showDetail('pressure')">Details</button>
+            </div>
+          </div>
+
+          <div class="alert-card warning" data-type="warning">
+            <div class="alert-icon">🌡️</div>
+            <div class="alert-body">
+              <div class="alert-title">Boiler Temperature Fluctuation</div>
+              <div class="alert-desc">Hot water temperature varied ±3°C in the last hour. Possible thermostat drift.</div>
+              <div class="alert-meta"><span class="alert-time">1 hr ago</span><span class="alert-sensor">Sensor: HW-T1</span></div>
+            </div>
+            <div class="alert-actions">
+              <button class="btn-outline" onclick="resolveAlert(this)">Resolve</button>
+              <button class="btn-primary">Details</button>
+            </div>
+          </div>
+
+          <div class="alert-card info" data-type="info">
+            <div class="alert-icon">📋</div>
+            <div class="alert-body">
+              <div class="alert-title">Scheduled Maintenance Due</div>
+              <div class="alert-desc">Annual boiler service is due in 14 days. Book a service appointment.</div>
+              <div class="alert-meta"><span class="alert-time">2 hr ago</span><span class="alert-sensor">System</span></div>
+            </div>
+            <div class="alert-actions">
+              <button class="btn-outline" onclick="resolveAlert(this)">Dismiss</button>
+              <button class="btn-primary">Schedule</button>
+            </div>
+          </div>
+
+          <div class="alert-card info resolved" data-type="info">
+            <div class="alert-icon">✅</div>
+            <div class="alert-body">
+              <div class="alert-title">Garden Irrigation Complete</div>
+              <div class="alert-desc">Scheduled irrigation cycle completed successfully. 18L used.</div>
+              <div class="alert-meta"><span class="alert-time">3 hr ago</span><span class="alert-sensor">Sensor: G-F1</span></div>
+            </div>
+            <div class="alert-actions">
+              <button class="btn-outline" onclick="resolveAlert(this)">Dismiss</button>
+            </div>
+          </div>
+
+          <div class="alert-card info resolved" data-type="info">
+            <div class="alert-icon">💧</div>
+            <div class="alert-body">
+              <div class="alert-title">Daily Usage Report Generated</div>
+              <div class="alert-desc">Yesterday's water usage: 138L. 8% below weekly average.</div>
+              <div class="alert-meta"><span class="alert-time">6 hr ago</span><span class="alert-sensor">System</span></div>
+            </div>
+            <div class="alert-actions">
+              <button class="btn-outline" onclick="resolveAlert(this)">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== SETTINGS PAGE ===== -->
+      <section class="page" id="page-settings">
+        <div class="settings-layout">
+          <div class="card settings-card">
+            <div class="card-header"><h2>System Configuration</h2></div>
+            <div class="settings-group">
+              <h3>Water Thresholds</h3>
+              <div class="setting-row">
+                <label>Max Daily Usage (L)</label>
+                <input type="number" class="setting-input" value="200" min="50" max="500" />
+              </div>
+              <div class="setting-row">
+                <label>Pressure Alert (bar)</label>
+                <input type="number" class="setting-input" value="4.0" min="1" max="6" step="0.1" />
+              </div>
+              <div class="setting-row">
+                <label>Hot Water Target Temp (°C)</label>
+                <input type="number" class="setting-input" value="55" min="40" max="70" />
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <h3>Notifications</h3>
+              <div class="setting-row">
+                <label>Email Alerts</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="setting-row">
+                <label>Push Notifications</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+              <div class="setting-row">
+                <label>SMS Alerts (Critical Only)</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="settings-group">
+              <h3>Digital Twin Sync</h3>
+              <div class="setting-row">
+                <label>Sync Interval</label>
+                <select class="setting-select">
+                  <option>Every 30 seconds</option>
+                  <option selected>Every 1 minute</option>
+                  <option>Every 5 minutes</option>
+                </select>
+              </div>
+              <div class="setting-row">
+                <label>Auto-adjust model</label>
+                <label class="toggle-switch">
+                  <input type="checkbox" checked />
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <button class="btn-primary" onclick="saveSettings()">💾 Save Settings</button>
+          </div>
+
+          <div class="settings-side">
+            <div class="card">
+              <div class="card-header"><h2>Connected Sensors</h2></div>
+              <div class="sensors-list" id="sensorsList"></div>
+            </div>
+            <div class="card">
+              <div class="card-header"><h2>Platform Info</h2></div>
+              <div class="platform-info">
+                <div class="info-row"><span>Version</span><span>1.0.0</span></div>
+                <div class="info-row"><span>Platform</span><span>HOMECARE DT</span></div>
+                <div class="info-row"><span>Sensors Active</span><span>12/14</span></div>
+                <div class="info-row"><span>Uptime</span><span>99.8%</span></div>
+                <div class="info-row"><span>Data Since</span><span>Jan 2025</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div><!-- end page-content -->
+  </main>
+
+  <!-- Toast notification -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Detail Modal -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <h2 id="modalTitle">Alert Detail</h2>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
